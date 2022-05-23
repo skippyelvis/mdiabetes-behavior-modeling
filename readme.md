@@ -6,6 +6,8 @@ in the mDiabetes-AI study
 - clone this repo
 - symlink the `arogya_content` and `local_storage` folders to your working directory
     - `ln -s /home/path/to/arogya_content .` (same for `local_storage`)
+- load the `utils` submodule
+	- `git submodule init && git submodule update`
 - create your own branch: `git checkout -b mycoolbranch`
 - run some experiments using the `Experiment` class from `experiment.py`
 
