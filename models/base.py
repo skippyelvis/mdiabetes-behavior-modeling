@@ -11,8 +11,8 @@ class Base(nn.Module):
     
     def __init__(self, 
                  input_size=36, hidden_size=256, output_size=8,
-                 lossfn="MSELoss", loss_kw={},
-                 optimizer="Adam", opt_kw={"lr": 1e-3},):
+                 lossfn="CrossEntropyLoss", loss_kw={},
+                 optimizer="SGD", opt_kw={"lr": 1e-3},):
         # define all inputs to the model
         # input_size:   # features in input
         # hidden_size:  # size of hidden layer
