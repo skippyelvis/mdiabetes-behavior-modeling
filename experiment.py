@@ -19,9 +19,10 @@ class Experiment:
     def run(self):
         rep = self.__dict__
         rep = {k: v for k,v in rep.items() if "_kw" in k}
-        self.train()
+        train_loss = self.train()
         results = self.evaluate()
         rep["results"] = results
+        rep["loss"] = train_loss
         return rep
         
     def train(self):
@@ -32,7 +33,7 @@ class Experiment:
             lh = self.train_epoch()
             if (e%rec_every) == 0:
                 out.append(lh)
-        return out
+        return np.array(out)
     
     def train_epoch(self):
         n_subj = self.train_kw.get("n_subj", None)
