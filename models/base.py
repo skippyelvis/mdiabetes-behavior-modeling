@@ -10,7 +10,7 @@ N_RESP_CATEGORIES = len(RESP_CATEGORIES)
 class Base(nn.Module):
     
     def __init__(self, 
-                 input_size=36, hidden_size=256, output_size=2,
+                 input_size=36, hidden_size=256, output_size=8,
                  lossfn="MSELoss", loss_kw={},
                  optimizer="Adam", opt_kw={"lr": 1e-3},):
         # define all inputs to the model
@@ -31,6 +31,10 @@ class Base(nn.Module):
     def forward(self, x):
         # fake forward function so we can do other stuff
         return x
+    
+    def predict(self, x):
+        with torch.no_grad():
+            return self.forward(x)
         
     def make_criterion(self):
         # build the loss function
@@ -42,10 +46,10 @@ class Base(nn.Module):
         opt = optcls(self.parameters(), **self.opt_kw)
         return opt
         
-    def _init_hc(self, x):
+    def _init_hc(self):
         # initialize the hidden/cell state variables
-        h0 = Variable(torch.zeros(1, x.size(1), self.hidden_size)) 
-        c0 = Variable(torch.zeros(1, x.size(1), self.hidden_size)) 
+        h0 = Variable(torch.zeros(1, 1, self.hidden_size))
+        c0 = Variable(torch.zeros(1, 1, self.hidden_size))
         return h0, c0
                      
                      
