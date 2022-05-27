@@ -5,9 +5,10 @@ import numpy as np
 
 class Experiment:
     
-    def __init__(self, data_kw={}, model_kw={}):
+    def __init__(self, data_kw={}, model_kw={}, train_kw={}):
         self.data_kw = data_kw
         self.model_kw = model_kw
+        self.train_kw = train_kw
         self.bd = BehaviorData(**data_kw)
         self.model = BasicLSTM(
             input_size=self.bd.dimensions[0],
@@ -15,45 +16,50 @@ class Experiment:
             **model_kw,
         )
         
-    def train(self, epochs=1, **kw):
-        ls = []
-        for e in range(epochs):
-            ls.append(self.train_epoch(**kw))
-        return ls
+    def run(self):
+        rep = self.__dict__
+        rep = {k: v for k,v in rep.items() if "_kw" in k}
+        self.train()
+        results = self.evaluate()
+        rep["results"] = results
+        return rep
         
-    def train_epoch(self, iters=None, **kw):
-        # train for one epoch (all subjects, all series)
-        # visit each (subj,ser) iters times
-        # return a list of loss per series per subject
-        #       [[11loss,12loss,...],[21loss,22loss,...],...]
-        loss_history = []
-        crit = self.model.make_criterion()
-        opt = self.model.make_optimizer()
-        for subj in self.bd.iterate_subjects(n_subj=kw.get("n_subj")):
-            subj_loss_history = []
-            for x, y in self.bd.iterate_series(subj, n_ser=kw.get("n_ser")):
-                l = self.train_step(crit, opt, x, y, iters)
-                subj_loss_history.append(l)
-            loss_history.append(subj_loss_history)
-        return loss_history
-                
-    def train_step(self, crit, opt, x, y, iters=None):
-        # train for iters steps and return mean loss value
-        if iters is None:
-            iters = 1
-        x, y = self.totensor(x,y)
-        lossh = []
-        for i in range(iters):
-            opt.zero_grad()
-            pred = self.model(x)
-            loss = crit(pred, y)
-            loss.backward()
-            opt.step()
-            lossh.append(loss.item())
-        return np.mean(lossh)
+    def train(self):
+        out = []
+        epochs = self.train_kw.get("epochs", 1)
+        rec_every = self.train_kw.get("rec_every", 5)
+        for e in range(epochs):
+            lh = self.train_epoch()
+            if (e%rec_every) == 0:
+                out.append(lh)
+        return out
     
-    def totensor(self, *args):
-        for a in args:
-            a = torch.Tensor(a)
-            a = a.view(a.shape[0], 1, a.shape[1])
-            yield a
+    def train_epoch(self):
+        n_subj = self.train_kw.get("n_subj", None)
+        loss_history = []
+        for (x, y) in self.bd.iterate(n_subj):
+            x, y = self.totensor(x), torch.Tensor(y)
+            loss = self.model.train_step(x, y)
+            loss_history.append(loss)
+        return loss_history
+    
+    def evaluate(self):
+        n_subj = self.train_kw.get("n_subj")
+        evals = []
+        for (x, y) in self.bd.iterate(n_subj):
+            x, y = self.totensor(x), torch.Tensor(y)
+            pred = self.model.predict(x).view(y.shape)
+            pred = pred.view(y.shape)
+            evals.append(self.diff_matrix(y, pred))
+        return evals
+            
+    def diff_matrix(self, true, pred):
+        diff = np.zeros((2, true.shape[0]))
+        diff[0] = (true[:,:4].argmax(1)-pred[:,:4].argmax(1))
+        diff[1] = (true[:,-4:].argmax(1)-pred[:,-4:].argmax(1))
+        return diff
+        
+    def totensor(self, a):
+        a = torch.Tensor(a)
+        a = a.view(a.shape[0], 1, a.shape[1])
+        return a
