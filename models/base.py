@@ -33,6 +33,7 @@ class Base(nn.Module):
         return x
     
     def predict(self, x):
+        # call forward method but do not collect gradient
         with torch.no_grad():
             return self.forward(x)
         

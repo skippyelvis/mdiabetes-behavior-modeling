@@ -5,3 +5,4 @@ data/
 **/local_storage
 notebook.ipynb
 BuildData.ipynb
+**/*.png

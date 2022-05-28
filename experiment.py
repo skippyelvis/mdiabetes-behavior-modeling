@@ -6,6 +6,9 @@ import numpy as np
 class Experiment:
     
     def __init__(self, data_kw={}, model_kw={}, train_kw={}):
+        # data_kw:  dict of keyword arguments to BehaviorData instance
+        # model_kw: dict of keyword arguments for Model instance
+        # train_kw: dict of keyword arguments for training loop
         self.data_kw = data_kw
         self.model_kw = model_kw
         self.train_kw = train_kw
@@ -17,6 +20,7 @@ class Experiment:
         )
         
     def run(self):
+        # Train the model, report parameters and results
         rep = self.__dict__
         rep = {k: v for k,v in rep.items() if "_kw" in k}
         train_loss = self.train()
@@ -26,6 +30,8 @@ class Experiment:
         return rep
         
     def train(self):
+        # Loop over data and train model on each batch
+        # Returns matrix of loss for each participant
         out = []
         epochs = self.train_kw.get("epochs", 1)
         rec_every = self.train_kw.get("rec_every", 5)
@@ -36,6 +42,7 @@ class Experiment:
         return np.array(out)
     
     def train_epoch(self):
+        # Loop over the data one time
         n_subj = self.train_kw.get("n_subj", None)
         loss_history = []
         for (x, y) in self.bd.iterate(n_subj):
@@ -45,6 +52,7 @@ class Experiment:
         return loss_history
     
     def evaluate(self):
+        # Evaluate the trained models predictions
         n_subj = self.train_kw.get("n_subj")
         evals = []
         for (x, y) in self.bd.iterate(n_subj):
@@ -55,12 +63,14 @@ class Experiment:
         return evals
             
     def diff_matrix(self, true, pred):
+        # Build a matrix showing the error in predicted responses
         diff = np.zeros((2, true.shape[0]))
         diff[0] = (true[:,:4].argmax(1)-pred[:,:4].argmax(1))
         diff[1] = (true[:,-4:].argmax(1)-pred[:,-4:].argmax(1))
         return diff
         
     def totensor(self, a):
+        # Convert a to a batched tensor
         a = torch.Tensor(a)
         a = a.view(a.shape[0], 1, a.shape[1])
         return a
