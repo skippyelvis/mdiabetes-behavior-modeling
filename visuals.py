@@ -2,15 +2,18 @@ import matplotlib.pyplot as plt
 
 def make_param_title(title, report):
     model = report["model_kw"]
+    train = report["train_kw"]
+    epochs = train["epochs"]
+    train_str = f"Epochs={epochs}"
     lfn = model["lossfn"]
     lr = model["opt_kw"]["lr"]
     hid = model["hidden_size"]
     model_str = f"Loss={lfn}, LR={lr}, Hidden={hid}"
-    return f"{title}\n{model_str}"
+    return f"{title}\n{train_str}\n{model_str}"
 
-def plot_training_curves(report):
-    curves = res["loss"]
-    
+def title_to_fname(title):
+    return "img/"+title.replace(" ", "").replace("\n", "-")+".png"
+
 def subplots(nrows=1, ncols=1, **kw):
     fig, ax = plt.subplots(
         nrows=nrows, ncols=ncols, 
@@ -33,7 +36,7 @@ class Plotter:
             report
         )
         ax[0].set_title(title, y=1.05)
-        return (fig, ax)
+        fig.savefig(title_to_fname(title))
     
     def training_loss(report):
         loss = report["loss"]
@@ -42,10 +45,10 @@ class Plotter:
             curve = loss[:,i]
             ax.plot(curve)
         title = make_param_title(
-            "Error in Predicted Responses per User by Week",
+            "Training Loss of Selected Users",
             report
         )
         ax.set_title(title, y=1.05)
         ax.set_ylabel("Error")
         ax.set_xlabel("Training epoch")
-        return (fig, ax)
+        fig.savefig(title_to_fname(title))

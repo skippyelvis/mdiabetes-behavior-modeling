@@ -6,3 +6,4 @@ data/
 notebook.ipynb
 BuildData.ipynb
 **/*.png
+**/img
