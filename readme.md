@@ -11,6 +11,9 @@ in the mDiabetes-AI study
 - create your own branch: `git checkout -b mycoolbranch`
 - run some experiments using the `Experiment` class from `experiment.py`
 
+## Pulling Changes to the `utils/` module
+- `git submodule foreach --recursive git pull`
+
 ## Files
 - `experiment.py`: defines the logic to run an experiment. This involves building the dataset and models with
 specified hyperparams, iterating over the data in particular ways, training the model, and calculating performance metrics

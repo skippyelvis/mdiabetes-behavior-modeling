@@ -29,11 +29,6 @@ class BasicLSTM(Base):
         out_q2 = self.fc_q2(output).softmax(2)
         return torch.cat([out_q1, out_q2],2)
     
-    def predict(self, x):
-        # Compute forward pass without computing gradient
-        with torch.no_grad():
-            return self.forward(x)
-    
     def train_step(self, x, y):
         # One optimization step of our model on 
         #    input data (x,y)
@@ -42,7 +37,8 @@ class BasicLSTM(Base):
         crit = self.make_criterion()
         opt.zero_grad()
         pred = self.forward(x).view(y.size())
-        loss = crit(pred[:,:4], y[:,:4]) + crit(pred[:,-4:], y[:,-4:])
+        k = self.fc_q1.out_features
+        loss = crit(pred[:,:k], y[:,:k]) + crit(pred[:,-1*k:], y[:,-1*k:])
         loss.backward()
         opt.step()
         return loss.item()
