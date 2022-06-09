@@ -1,19 +1,20 @@
 from utils.behavior_data import BehaviorData
-from models.basic import BasicLSTM
 import torch
 import numpy as np
+import importlib
 
 class Experiment:
     
-    def __init__(self, data_kw={}, model_kw={}, train_kw={}):
+    def __init__(self, data_kw={}, model="BasicLSTM", model_kw={}, train_kw={}):
         # data_kw:  dict of keyword arguments to BehaviorData instance
         # model_kw: dict of keyword arguments for Model instance
         # train_kw: dict of keyword arguments for training loop
         self.data_kw = data_kw
+        self.model_name = model
         self.model_kw = model_kw
         self.train_kw = train_kw
         self.bd = BehaviorData(**data_kw)
-        self.model = BasicLSTM(
+        self.model = self._get_model()(
             input_size=self.bd.dimensions[0],
             output_size=self.bd.dimensions[1],
             **model_kw,
@@ -25,6 +26,12 @@ class Experiment:
         rep = {k: v for k,v in rep.items() if "_kw" in k}
         train_loss = self.train()
         results = self.evaluate()
+        rep["params"] = {
+            "data_kw": self.data_kw,
+            "model_name": self.model_name,
+            "model_kw": self.model_kw,
+            "train_kw": self.train_kw,
+        }
         rep["results"] = results
         rep["loss"] = train_loss
         return rep
@@ -74,3 +81,7 @@ class Experiment:
         a = torch.Tensor(a)
         a = a.view(a.shape[0], 1, a.shape[1])
         return a
+        
+    def _get_model(self):
+        mod = importlib.import_module(f"models.{self.model_name}")
+        return getattr(mod, self.model_name)
