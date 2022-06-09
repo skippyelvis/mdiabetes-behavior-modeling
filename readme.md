@@ -2,7 +2,7 @@
 This repo contains the code used to model the behavior of human participants
 in the mDiabetes-AI study
 
-## Getting Started
+## Getting Started!
 - clone this repo
 - symlink the `arogya_content` and `local_storage` folders to your working directory
     - `ln -s /home/path/to/arogya_content .` (same for `local_storage`)
