@@ -68,6 +68,23 @@ class Experiment:
             pred = pred.view(y.shape)
             evals.append(self.diff_matrix(y, pred))
         return evals
+    
+    def report_scores(self):
+        n_subj = self.train_kw.get("n_subj")
+        cumulative = None
+        numPeople = 0
+        for (x, y) in self.bd.iterate(n_subj):
+            x, y = self.totensor(x), torch.Tensor(y)
+            res, label = self.model.report_scores(x, y)
+            if cumulative is None:
+                cumulative = res
+            else:
+                cumulative += res
+            numPeople += 1
+        cumulative /= numPeople
+        print(f"Used {numPeople} subjects")
+        return cumulative, label
+        
             
     def diff_matrix(self, true, pred):
         # Build a matrix showing the error in predicted responses

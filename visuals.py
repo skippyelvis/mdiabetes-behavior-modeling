@@ -41,9 +41,10 @@ class Plotter:
     def training_loss(report):
         loss = report["loss"]
         fig, ax = subplots()
+        xes = [report['train_kw']['rec_every'] * x for x in range(loss.shape[0])]
         for i in range(loss.shape[1]):
             curve = loss[:,i]
-            ax.plot(curve)
+            ax.plot(xes, curve)
         title = make_param_title(
             "Training Loss of Selected Users",
             report
