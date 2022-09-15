@@ -22,6 +22,19 @@ def NDCG(pred, y):
     loss = dcg.sum() / idcg.sum()
     return loss
 
+def MRR(pred, y):
+    # calculate ranks (higher % prediction is lower rank)
+    ranks = -1*pred
+    ranks = ranks.argsort()
+    ranks = ranks.argsort()
+    ranks += 1 # best rank should be 1 not 0
+    # 1/rank for correct prediction entries, 0 for others (as y is 0 then)
+    mrr = (y / ranks).sum(axis=1).mean()
+    return mrr
+
+def PairwiseLogLoss(pred, y):
+    None
+
 def ApproxNDCG(pred, y):
     # differentiable approximate form of NDCG
     None
@@ -75,11 +88,28 @@ class AdaptableLSTM(Base):
     def report_scores(self, x, y):
         with torch.no_grad():
             pred = self.forward(x).view(y.size())
+            ynp = y.detach().numpy()
+            prednp = pred.detach().numpy()
+            pred0 = torch.tensor([i for ind, i in enumerate(prednp) if ynp[ind, 0] == 0])
+            y0 = torch.tensor([i for i in ynp if i[0] == 0])
+            pred1 = torch.tensor([i for ind, i in enumerate(prednp) if ynp[ind, 0] != 0])
+            y1 = torch.tensor([i for i in ynp if i[0] != 0])
+            print(pred1, y1)
             k = self.fc_q1.out_features
             crit = torch.nn.MSELoss()
             mseloss = crit(pred[:,:k], y[:,:k]) + crit(pred[:,-1*k:], y[:,-1*k:])
+            mseloss0 = crit(pred0[:,:k], y0[:,:k]) + crit(pred0[:,-1*k:], y0[:,-1*k:])
+            mseloss1 = crit(pred1[:,:k], y1[:,:k]) + crit(pred1[:,-1*k:], y1[:,-1*k:])
             crit = torch.nn.CrossEntropyLoss()
             celoss = crit(pred[:,:k], y[:,:k]) + crit(pred[:,-1*k:], y[:,-1*k:])
+            celoss0 = crit(pred0[:,:k], y0[:,:k]) + crit(pred0[:,-1*k:], y0[:,-1*k:])
+            celoss1 = crit(pred1[:,:k], y1[:,:k]) + crit(pred1[:,-1*k:], y1[:,-1*k:])
             crit = NDCG
             ndcg = crit(pred[:,:k], y[:,:k]) + crit(pred[:,-1*k:], y[:,-1*k:])
-            return np.array([mseloss.item(), celoss.item(), ndcg.item()]), ["MSE", "CE", "NDCG"]
+            ndcgloss0 = crit(pred0[:,:k], y0[:,:k]) + crit(pred0[:,-1*k:], y0[:,-1*k:])
+            ndcgloss1 = crit(pred1[:,:k], y1[:,:k]) + crit(pred1[:,-1*k:], y1[:,-1*k:])
+            crit = MRR
+            mrr = crit(pred[:,:k], y[:,:k]) + crit(pred[:,-1*k:], y[:,-1*k:])
+            mrrloss0 = crit(pred0[:,:k], y0[:,:k]) + crit(pred0[:,-1*k:], y0[:,-1*k:])
+            mrrloss1 = crit(pred1[:,:k], y1[:,:k]) + crit(pred1[:,-1*k:], y1[:,-1*k:])
+            return np.array([mseloss.item(), celoss.item(), ndcg.item(), mrr.item(), mseloss0.item(), celoss0.item(), ndcg0.item(), mrr0.item(), mseloss1.item(), celoss1.item(), ndcg1.item(), mrr1.item()]), ["MSE", "CE", "NDCG", "MRR", "MSE0", "CE0", "NDCG0", "MRR0", "MSE1", "CE1", "NDCG1", "MRR1"]
