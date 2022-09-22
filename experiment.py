@@ -49,41 +49,26 @@ class Experiment:
         return np.array(out)
     
     def train_epoch(self):
-        # Loop over the data one time
-        n_subj = self.train_kw.get("n_subj", None)
-        loss_history = []
-        for (x, y) in self.bd.iterate(n_subj):
-            x, y = self.totensor(x), torch.Tensor(y)
-            loss = self.model.train_step(x, y)
-            loss_history.append(loss)
-        return loss_history
+        # feed through training data one time
+        x, y = self.bd.features[self.bd.train].unsqueeze(1), self.bd.labels[self.bd.train]
+        # print(x.shape, y.shape)
+        loss = self.model.train_step(x, y)
+        return [loss]
     
     def evaluate(self):
         # Evaluate the trained models predictions
         n_subj = self.train_kw.get("n_subj")
         evals = []
-        for (x, y) in self.bd.iterate(n_subj):
-            x, y = self.totensor(x), torch.Tensor(y)
-            pred = self.model.predict(x).view(y.shape)
-            pred = pred.view(y.shape)
-            evals.append(self.diff_matrix(y, pred))
+        x, y = self.bd.features[self.bd.test].unsqueeze(1), self.bd.labels[self.bd.test]
+        pred = self.model.predict(x).view(y.shape)
+        pred = pred.view(y.shape)
+        evals.append(self.diff_matrix(y, pred))
         return evals
     
     def report_scores(self):
-        n_subj = self.train_kw.get("n_subj")
-        cumulative = None
-        numPeople = 0
-        for (x, y) in self.bd.iterate(n_subj):
-            x, y = self.totensor(x), torch.Tensor(y)
-            res, label = self.model.report_scores(x, y)
-            if cumulative is None:
-                cumulative = res
-            else:
-                cumulative += res
-            numPeople += 1
-        cumulative /= numPeople
-        print(f"Used {numPeople} subjects")
-        return cumulative, label
+        x, y = self.bd.features[self.bd.test].unsqueeze(1), self.bd.labels[self.bd.test]
+        res, label = self.model.report_scores(x, y)
+        return res, label
         
             
     def diff_matrix(self, true, pred):
@@ -97,6 +82,11 @@ class Experiment:
         # Convert a to a batched tensor
         a = torch.Tensor(a)
         a = a.view(a.shape[0], 1, a.shape[1])
+        return a
+    
+    def forceBatch(self, a):
+        # Convert a to a batched tensor
+        a = a.view(1, 1, a.shape[0])
         return a
         
     def _get_model(self):

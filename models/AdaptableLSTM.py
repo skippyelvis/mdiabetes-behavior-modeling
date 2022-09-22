@@ -85,15 +85,16 @@ class AdaptableLSTM(Base):
         opt.step()
         return loss.item()
     
+    #TODO: rework this flow to account for participants having different #s of responses
     def report_scores(self, x, y):
         with torch.no_grad():
             pred = self.forward(x).view(y.size())
             ynp = y.detach().numpy()
             prednp = pred.detach().numpy()
-            pred0 = torch.tensor([i for ind, i in enumerate(prednp) if ynp[ind, 0] == 0])
-            y0 = torch.tensor([i for i in ynp if i[0] == 0])
-            pred1 = torch.tensor([i for ind, i in enumerate(prednp) if ynp[ind, 0] != 0])
-            y1 = torch.tensor([i for i in ynp if i[0] != 0])
+            pred0 = torch.tensor(np.array([i for ind, i in enumerate(prednp) if ynp[ind, 0] != 0]))
+            y0 = torch.tensor(np.array([i for i in ynp if i[0] != 0]))
+            pred1 = torch.tensor(np.array([i for ind, i in enumerate(prednp) if ynp[ind, 0] == 0]))
+            y1 = torch.tensor(np.array([i for i in ynp if i[0] == 0]))
             print(pred1, y1)
             k = self.fc_q1.out_features
             crit = torch.nn.MSELoss()
@@ -106,10 +107,10 @@ class AdaptableLSTM(Base):
             celoss1 = crit(pred1[:,:k], y1[:,:k]) + crit(pred1[:,-1*k:], y1[:,-1*k:])
             crit = NDCG
             ndcg = crit(pred[:,:k], y[:,:k]) + crit(pred[:,-1*k:], y[:,-1*k:])
-            ndcgloss0 = crit(pred0[:,:k], y0[:,:k]) + crit(pred0[:,-1*k:], y0[:,-1*k:])
-            ndcgloss1 = crit(pred1[:,:k], y1[:,:k]) + crit(pred1[:,-1*k:], y1[:,-1*k:])
+            ndcg0 = crit(pred0[:,:k], y0[:,:k]) + crit(pred0[:,-1*k:], y0[:,-1*k:])
+            ndcg1 = crit(pred1[:,:k], y1[:,:k]) + crit(pred1[:,-1*k:], y1[:,-1*k:])
             crit = MRR
             mrr = crit(pred[:,:k], y[:,:k]) + crit(pred[:,-1*k:], y[:,-1*k:])
-            mrrloss0 = crit(pred0[:,:k], y0[:,:k]) + crit(pred0[:,-1*k:], y0[:,-1*k:])
-            mrrloss1 = crit(pred1[:,:k], y1[:,:k]) + crit(pred1[:,-1*k:], y1[:,-1*k:])
-            return np.array([mseloss.item(), celoss.item(), ndcg.item(), mrr.item(), mseloss0.item(), celoss0.item(), ndcg0.item(), mrr0.item(), mseloss1.item(), celoss1.item(), ndcg1.item(), mrr1.item()]), ["MSE", "CE", "NDCG", "MRR", "MSE0", "CE0", "NDCG0", "MRR0", "MSE1", "CE1", "NDCG1", "MRR1"]
+            mrr0 = crit(pred0[:,:k], y0[:,:k]) + crit(pred0[:,-1*k:], y0[:,-1*k:])
+            mrr1 = crit(pred1[:,:k], y1[:,:k]) + crit(pred1[:,-1*k:], y1[:,-1*k:])
+            return np.array([mseloss.item(), celoss.item(), ndcg.item(), mrr.item(), mseloss0.item(), celoss0.item(), ndcg0.item(), mrr0.item(), mseloss1.item(), celoss1.item(), ndcg1.item(), mrr1.item()])/2, ["MSE", "CE", "NDCG", "MRR", "MSE0", "CE0", "NDCG0", "MRR0", "MSE1", "CE1", "NDCG1", "MRR1"]
