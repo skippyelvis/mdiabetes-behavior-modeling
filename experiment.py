@@ -50,25 +50,41 @@ class Experiment:
     
     def train_epoch(self):
         # feed through training data one time
-        x, y = self.bd.features[self.bd.train].unsqueeze(1), self.bd.labels[self.bd.train]
-        # print(x.shape, y.shape)
-        loss = self.model.train_step(x, y)
-        return [loss]
+        loss = []
+        for indx in self.bd.train:
+            # extract one participants data
+            data = self.bd.chunkedFeatures[indx]
+            label = self.bd.chunkedLabels[indx]
+            # important to note that we are not using batching here
+            # one participants data is ONE sequence
+            loss.append(self.model.train_step(data, label))
+        print(np.mean(loss))
+        return loss
     
     def evaluate(self):
         # Evaluate the trained models predictions
-        n_subj = self.train_kw.get("n_subj")
         evals = []
-        x, y = self.bd.features[self.bd.test].unsqueeze(1), self.bd.labels[self.bd.test]
-        pred = self.model.predict(x).view(y.shape)
-        pred = pred.view(y.shape)
-        evals.append(self.diff_matrix(y, pred))
+        for indx in self.bd.test:
+            # extract one participants data
+            data = self.bd.chunkedFeatures[indx]
+            label = self.bd.chunkedLabels[indx]
+            # important to note that we are not using batching here
+            # one participants data is ONE sequence
+            pred = self.model.predict(data)
+            pred = pred.view(label.shape)
+            evals.append(self.diff_matrix(label, pred))
         return evals
     
     def report_scores(self):
-        x, y = self.bd.features[self.bd.test].unsqueeze(1), self.bd.labels[self.bd.test]
-        res, label = self.model.report_scores(x, y)
-        return res, label
+        scores = []
+        for indx in self.bd.test:
+            # extract one participants data
+            data = self.bd.chunkedFeatures[indx]
+            label = self.bd.chunkedLabels[indx]
+            res, label = self.model.report_scores_min(data, label)
+            scores.append(res)
+        scores = np.mean(scores, axis=0)
+        return scores, label
         
             
     def diff_matrix(self, true, pred):

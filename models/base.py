@@ -28,6 +28,7 @@ class Base(nn.Module):
         self.lossfn, self.loss_kw = lossfn, loss_kw
         self.optimizer, self.opt_kw = optimizer, opt_kw
         
+        
     def forward(self, x):
         # fake forward function so we can do other stuff
         return x
@@ -45,12 +46,13 @@ class Base(nn.Module):
         # build the optimizer instance
         optcls = getattr(torch.optim, self.optimizer)
         opt = optcls(self.parameters(), **self.opt_kw)
-        return opt
+        sched = torch.optim.lr_scheduler.StepLR(opt, step_size=30, gamma=.5)
+        return opt, sched
         
     def _init_hc(self):
         # initialize the hidden/cell state variables
-        h0 = Variable(torch.zeros(1, 1, self.hidden_size))
-        c0 = Variable(torch.zeros(1, 1, self.hidden_size))
+        h0 = Variable(torch.zeros(1, self.hidden_size))
+        c0 = Variable(torch.zeros(1, self.hidden_size))
         return h0, c0
                      
                      

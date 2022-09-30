@@ -38,9 +38,9 @@ def PairwiseLogLoss(pred, y):
 def ApproxNDCG(pred, y):
     # differentiable approximate form of NDCG
     None
-    
 
-class AdaptableLSTM(Base):
+
+class BasicNN(Base):
     
     def __init__(self, *args, **kw):
         # Simple model: lstm block with two linear output layers,
@@ -49,53 +49,24 @@ class AdaptableLSTM(Base):
         # hidden_size: size of lstm hidden layer
         # output_size: size of output label of data
         super().__init__(*args, **kw)
-        self.lstm = nn.LSTM(self.input_size, self.hidden_size)
+        self.inputLayer = nn.Linear(self.input_size, self.hidden_size)
         self.fc_q1 = nn.Linear(self.hidden_size, self.output_size//2)
         self.fc_q2 = nn.Linear(self.hidden_size, self.output_size//2)
         self.relu = nn.ReLU()
     
     def forward(self, x):
-        # One forward pass of input vector/batch x
-        # Pass x thru the LSTM cell, then pass output
-        #    through each linear output layer for each
-        #    response prediction. 
-        # Then join predictions together as one vector
-        H0, C0 = self._init_hc()
-        output, (H,C) = self.lstm(x, (H0, C0))
+        output = self.inputLayer(x) 
         out = self.relu(output)
         out_q1 = self.fc_q1(output).softmax(-1)
         out_q2 = self.fc_q2(output).softmax(-1)
         return torch.cat([out_q1, out_q2],-1)
     
-    def w1_reg(self, y):
-        k = self.fc_q1.out_features
-        y1 = y[:, :k]
-        y2 = y[:, k:]
-        t = y.shape[0]
-        if (t < 2):
-            return 0
-        sum1 = torch.abs(y1[1:] - y1[:-1]).sum()
-        sum2 = torch.abs(y2[1:] - y2[:-1]).sum()
-        w1 = (sum1 + sum2) / (2 * (t-1))
-        return w1
-    
-    def w2_reg(self, y):
-        k = self.fc_q1.out_features
-        y1 = y[:, :k]
-        y2 = y[:, k:]
-        t = y.shape[0]
-        if (t < 2):
-            return 0
-        sum1 = torch.sqrt((y1[1:] - y1[:-1]) ** 2).sum()
-        sum2 = torch.sqrt((y2[1:] - y2[:-1]) ** 2).sum()
-        w2 = (sum1 + sum2) / (2 * (t-1))
-        return w2
     
     def train_step(self, x, y):
         # One optimization step of our model on 
         #    input data (x,y)
         # Returns loss value
-        opt, sched = self.make_optimizer()
+        opt = self.make_optimizer()
         if (self.lossfn == "NDCG"):
             crit = NDCG
         else:
@@ -104,11 +75,8 @@ class AdaptableLSTM(Base):
         pred = self.forward(x).view(y.size())
         k = self.fc_q1.out_features
         loss = crit(pred[:,:k], y[:,:k]) + crit(pred[:,-1*k:], y[:,-1*k:])
-        # loss += .025 * self.w1_reg(pred) #+ .025 * self.w2_reg(pred)
         loss.backward()
         opt.step()
-        sched.step()
-        
         return loss.item()
     
     #TODO: rework this to split network output/answers in half BEFORE filtering by no-response
@@ -152,7 +120,4 @@ class AdaptableLSTM(Base):
             ndcg = crit(pred[:,:k], y[:,:k]) + crit(pred[:,-1*k:], y[:,-1*k:])
             crit = MRR
             mrr = crit(pred[:,:k], y[:,:k]) + crit(pred[:,-1*k:], y[:,-1*k:])
-            sm = torch.nn.Softmax(dim=1)
-            accuracy = (sm(pred[:,:k]) * y[:,:k]).sum() + (sm(pred[:,k:]) * y[:,k:]).sum()
-            accuracy /= y.shape[1]
-        return np.array([mseloss.item(), celoss.item(), ndcg.item(), mrr.item(), accuracy.item()])/2, ["MSE", "CE", "NDCG", "MRR", "Acc"]
+        return np.array([mseloss.item(), celoss.item(), ndcg.item(), mrr.item()])/2, ["MSE", "CE", "NDCG", "MRR"]
